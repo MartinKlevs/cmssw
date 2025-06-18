@@ -87,7 +87,7 @@ void MTDTrackQualityMVAProducer::fillDescriptions(edm::ConfigurationDescriptions
   desc.add<edm::InputTag>("npixEndcapSrc", edm::InputTag("trackExtenderWithMTD", "npixEndcap"))
       ->setComment("# of Endcap pixel associated to refitted tracks");
   desc.add<edm::FileInPath>("qualityBDT_weights_file",
-                            edm::FileInPath("RecoMTD/TimingIDTools/data/clf4D_MTDquality_bo.xml"))
+                            edm::FileInPath("RecoMTD/TimingIDTools/data/BDT_direct_only_d7.xml"))
       ->setComment("Track MTD quality BDT weights");
   descriptions.add("mtdTrackQualityMVAProducer", desc);
 }

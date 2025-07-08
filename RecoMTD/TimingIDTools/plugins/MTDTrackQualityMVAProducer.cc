@@ -37,15 +37,17 @@ private:
 
   edm::EDGetTokenT<reco::TrackCollection> tracksToken_;
   edm::EDGetTokenT<reco::TrackCollection> tracksMTDToken_;
-
   edm::EDGetTokenT<edm::ValueMap<float>> btlMatchChi2Token_;
+  edm::EDGetTokenT<reco::BeamSpot> RecBeamSpotToken_;
   edm::EDGetTokenT<edm::ValueMap<float>> btlMatchTimeChi2Token_;
   edm::EDGetTokenT<edm::ValueMap<float>> etlMatchChi2Token_;
   edm::EDGetTokenT<edm::ValueMap<float>> etlMatchTimeChi2Token_;
   edm::EDGetTokenT<edm::ValueMap<float>> mtdTimeToken_;
+  edm::EDGetTokenT<edm::ValueMap<float>> sigmamtdTimeToken_;
   edm::EDGetTokenT<edm::ValueMap<float>> pathLengthToken_;
   edm::EDGetTokenT<edm::ValueMap<int>> npixBarrelToken_;
   edm::EDGetTokenT<edm::ValueMap<int>> npixEndcapToken_;
+  edm::EDGetTokenT<edm::ValueMap<float>> outermostHitPositionToken_;
 
   MTDTrackQualityMVA mva_;
 };
@@ -87,7 +89,7 @@ void MTDTrackQualityMVAProducer::fillDescriptions(edm::ConfigurationDescriptions
   desc.add<edm::InputTag>("npixEndcapSrc", edm::InputTag("trackExtenderWithMTD", "npixEndcap"))
       ->setComment("# of Endcap pixel associated to refitted tracks");
   desc.add<edm::FileInPath>("qualityBDT_weights_file",
-                            edm::FileInPath("RecoMTD/TimingIDTools/data/clf4D_MTDquality_bo.xml"))
+                            edm::FileInPath("RecoMTD/TimingIDTools/data/BDT_nvars_17_d7.xml"))
       ->setComment("Track MTD quality BDT weights");
   descriptions.add("mtdTrackQualityMVAProducer", desc);
 }
@@ -108,6 +110,11 @@ void MTDTrackQualityMVAProducer::produce(edm::Event& ev, const edm::EventSetup& 
   edm::Handle<reco::TrackCollection> tracksH;
   ev.getByToken(tracksToken_, tracksH);
   const auto& tracks = *tracksH;
+  
+  reco::BeamSpot beamSpot;
+  edm::Handle<reco::BeamSpot> BeamSpotH;
+  ev.getByToken(RecBeamSpotToken_, BeamSpotH);
+  beamSpot = *BeamSpotH;
 
   const auto& btlMatchChi2 = ev.get(btlMatchChi2Token_);
   const auto& btlMatchTimeChi2 = ev.get(btlMatchTimeChi2Token_);
@@ -117,6 +124,8 @@ void MTDTrackQualityMVAProducer::produce(edm::Event& ev, const edm::EventSetup& 
   const auto& npixBarrel = ev.get(npixBarrelToken_);
   const auto& npixEndcap = ev.get(npixEndcapToken_);
   const auto& mtdTime = ev.get(mtdTimeToken_);
+  const auto& sigmamtdTime = ev.get(sigmamtdTimeToken_);
+  const auto& lHitPos = ev.get(outermostHitPositionToken_);
 
   std::vector<float> mvaOutRaw;
 
@@ -127,6 +136,7 @@ void MTDTrackQualityMVAProducer::produce(edm::Event& ev, const edm::EventSetup& 
       mvaOutRaw.push_back(-1.);
     else {
       mvaOutRaw.push_back(mva_(trackref,
+                               beamSpot,
                                npixBarrel,
                                npixEndcap,
                                btlMatchChi2,
@@ -134,7 +144,9 @@ void MTDTrackQualityMVAProducer::produce(edm::Event& ev, const edm::EventSetup& 
                                etlMatchChi2,
                                etlMatchTimeChi2,
                                mtdTime,
-                               pathLength));
+                               sigmamtdTime,
+                               pathLength,
+                               lHitPos));
     }
   }
   fillValueMap(ev, tracksH, mvaOutRaw, mvaName);
